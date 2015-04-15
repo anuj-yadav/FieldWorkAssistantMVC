@@ -1,5 +1,4 @@
 <?php
-
 namespace Applications\PMTool\Controllers;
 
 if (!defined('__EXECUTION_ACCESS_RESTRICTION__'))
@@ -61,27 +60,142 @@ class ActiveTaskController extends \Library\BaseController {
   }
   
   public function executeForms(\Library\HttpRequest $rq) {
-	$sessionProject = \Applications\PMTool\Helpers\ProjectHelper::GetCurrentSessionProject($this->user());
+		$sessionProject = \Applications\PMTool\Helpers\ProjectHelper::GetCurrentSessionProject($this->user());
     //Check if a project needs to be selected in order to display this page
     if (!$sessionProject) {
       $this->Redirect(\Library\Enums\ResourceKeys\UrlKeys::ProjectsSelectProject . "?onSuccess=" . \Library\Enums\ResourceKeys\UrlKeys::TaskAddPrompt);
     }
-	$sessionTask = \Applications\PMTool\Helpers\TaskHelper::SetCurrentSessionTask($this->user(), NULL, $rq->getData("task_id"));
+		$sessionTask = \Applications\PMTool\Helpers\TaskHelper::SetCurrentSessionTask($this->user(), NULL, $rq->getData("task_id"));
     $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::currentProject, $sessionProject[\Library\Enums\SessionKeys::ProjectObject]);
     $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::currentTask, $sessionTask[\Library\Enums\SessionKeys::TaskObj]);
+
+		\Applications\PMTool\Helpers\ActiveTaskHelper::SetActiveTab($this->user(), \Applications\PMTool\Resources\Enums\ActiveTaskTabKeys::ActiveTaskFormsTab);
 	
-	\Applications\PMTool\Helpers\ActiveTaskHelper::SetActiveTab($this->user(), \Applications\PMTool\Resources\Enums\ActiveTaskTabKeys::ActiveTaskFormsTab);
-	
-	//Fetch tooltip data from xml and pass to view as an array
+		//Fetch tooltip data from xml and pass to view as an array
     $tooltip_array = \Applications\PMTool\Helpers\PopUpHelper::getTooltipMsgForAttribute('{"targetcontroller":"activeTask", "targetaction": "forms", "targetattr": ["h4-taskforms-leftcol-gi", "h4-taskforms-rightcol-gi"]}', $this->app->name());
     $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariables\Popup::tooltip_message, $tooltip_array);
 	
-	$this->page->addVar(
+		$this->page->addVar(
             \Applications\PMTool\Resources\Enums\ViewVariablesKeys::activeTaskTabStatus, \Applications\PMTool\Helpers\ActiveTaskHelper::GetTabsStatus($this->app()->user()));
     $this->page->addVar(
             \Applications\PMTool\Resources\Enums\ViewVariablesKeys::form_modules, $this->app()->router()->selectedRoute()->phpModules());
   }
-  
+
+  public function executeSendMessage(\Library\HttpRequest $rq) {
+    $result = $this->InitResponseWS();
+    $currentDiscussion = $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion];
+    $currSessTask =  \Applications\PMTool\Helpers\TaskHelper::GetCurrentSessionTask($this->user());
+    $userConnected = \Applications\PMTool\Helpers\UserHelper::GetUserConnectedSession($this->user());
+    $discussionContentObj= new \Applications\PMTool\Models\Dao\Discussion_content;
+     $result['success'] = false; 
+    $discussionManager = $this->managers->getManagerOf("Discussion");
+    $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
+    $dataPost = $this->dataPost(); 
+    $discussionId = $dataPost['discussion_id'];
+    // send the receiver this message
+    // through our means
+    // of communication
+    $post = array(
+       "discussion_id" => $dataPost['discussion_id'],
+       "discussion_content_value"=> $dataPost['message'],
+       "discussion_content_category_value" => $currentDiscussion['comm_id'],
+       "discussion_content_category_type" => $currentDiscussion['comm_type']
+    );
+      
+    foreach ($post as $k => $v) {
+      $discussionContentObj->$k = $v;
+    }
+    // call our helper 
+    //
+    $res = \Applications\PMTool\Helpers\DiscussionHelper::SendMessage(
+        $this->app()->user(),
+        $currSessTask['task_info_obj']->task_name, 
+        $discussionId,
+        $discussionContentObj
+    );
+    $res2 = $discussionContentManager->add($discussionContentObj); 
+
+    if ($res && $res2) {
+      $result['success'] = true;
+    }
+
+
+
+    return $this->SendResponseWS(
+      $result,
+      array(
+        "resx_file" => \Applications\PMTool\Resources\Enums\ResxFileNameKeys::ActiveTask,
+        "resx_key" => $this->action(),
+        "step"=> ($result['success']) ? "success": "error"
+      )
+    );
+  } 
+  // get all the messages
+  // given a discussion id
+  // and task from session
+  //
+  // TODO add paging
+  public function executeGetMessages(\Library\HttpRequest $rq) {
+    $result = $this->InitResponseWS();
+    $dataPost = $this->dataPost();
+    //$page = $dataPost['page'];
+    //$size = $dataPost['size'];
+    $currentDiscussion = $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion];
+      
+    $result['success'] = false;
+    //$discussionId = $currentDiscussion['discussion_id'];
+    $discussionId = $dataPost['discussion_id'];
+    
+    $discussionManager = $this->managers->getManagerOf("Discussion");
+    $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
+    $discussionContentObj = new \Applications\PMTool\Models\Dao\Discussion_content;
+    $discussionContentObj->setDiscussion_Id($discussionId);
+    $otherProviders = array(
+       "technician" => $this->managers->getManagerOf("Technician")
+    );
+    $data = \Applications\PMTool\Helpers\DiscussionHelper::getMessages(
+        $discussionId,
+        $discussionManager,
+        $discussionContentManager,
+        $otherProviders
+    );
+     
+    if (is_array($data)) {
+      // we should now get
+      // 
+      //$result = $this->InitResponseWS("success");
+      $result['success'] = true;
+      $result['data'] = $data;
+        
+    }
+
+    return $this->SendResponseWS($result,array(
+        "resx_file" =>  \Applications\PMTool\Resources\Enums\ResxFileNameKeys::ActiveTask,
+        "resx_key" => $this->action(),
+        "step" => ($result['success']) ? "success" : "error"
+    ));
+  }
+
+  // for people
+  // other than pm
+  public function executeViewCommunication(\Library\HttpRequest $rq) {
+    $sessionProject = \Applications\PMTool\Helpers\ProjectHelper::GetCurrentSessionProject($this->user());
+    if (!$sessionProject) {
+        $this->Redirect(\Library\Enums\ResourceKeys\UrlKeys::ProjectSelectProject . "?onSuccess=" .  
+        \Library\Enums\ResourceKeys\UrlKeys::TaskAddPrompt);
+    }
+
+    $sessionTask = \Applications\PMTool\Helpers\TaskHelper::SetCurrentSessionTask($this->user(), NULL, $rq->getData("task_id"));
+    
+    $discussion = $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]; 
+    if ( isset($discussion)) {
+        $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussionId, $discussion['discussion_id']); 
+
+    }
+
+
+
+  }
   public function executeCommunications(\Library\HttpRequest $rq) {
 	$sessionProject = \Applications\PMTool\Helpers\ProjectHelper::GetCurrentSessionProject($this->user());
     //Check if a project needs to be selected in order to display this page
@@ -96,9 +210,16 @@ class ActiveTaskController extends \Library\BaseController {
 	\Applications\PMTool\Helpers\ActiveTaskHelper::SetActiveTab($this->user(), \Applications\PMTool\Resources\Enums\ActiveTaskTabKeys::ActiveTaskCommTab);
 	
 	//Get current Discussion from session and set for view
-	if(isset($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]))
+	if(isset($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion])) {
 		$this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::currentDiscussions, $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]);
-	
+
+  $discussion = $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion];
+    
+  $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussionId, $discussion['discussion_id']);
+  } else {
+  $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussionId, NULL);
+  }
+
 	//Let's get this task specific services
 	$sessionPm = \Applications\PMTool\Helpers\PmHelper::GetCurrentSessionPm($this->user());
     $pm_services = \Applications\PMTool\Helpers\ServiceHelper::GetPmServices($this, $sessionPm);
@@ -114,11 +235,13 @@ class ActiveTaskController extends \Library\BaseController {
         \Applications\PMTool\Resources\Enums\ViewVariablesKeys::properties_left => \Applications\PMTool\Helpers\CommonHelper::SetPropertyNamesForDualList(strtolower("service"))  
     );
     $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::data, $data);
-	
+    // add the discussion id
+    // so it is available to 
+    // our discussion manager
 	
 	//Similarly let's get the task specific technicians
 	$sessionPm = \Applications\PMTool\Helpers\PmHelper::GetCurrentSessionPm($this->user());
-    $pm_technicians = \Applications\PMTool\Helpers\TechnicianHelper::GetPmTechnicians($this, $sessionPm);
+  $pm_technicians = \Applications\PMTool\Helpers\TechnicianHelper::GetPmTechnicians($this, $sessionPm);
 	$task_technicians = \Applications\PMTool\Helpers\TechnicianHelper::GetAndStoreTaskTechnicians($this, $sessionTask);
 	// filter the pm technicians after we retrieve the task technicians
     $pm_technicians = \Applications\PMTool\Helpers\TechnicianHelper::FilterTechniciansToExcludeTaskTechnicians($pm_technicians, $task_technicians);
@@ -142,34 +265,50 @@ class ActiveTaskController extends \Library\BaseController {
   public function executeStartCommWith(\Library\HttpRequest $rq) {
     $result = $this->InitResponseWS(); // Init result
 
-    $result['success'] = false;
-	if($this->dataPost['selection_type'] == 'technician') {
-	  foreach($_SESSION[\Library\Enums\SessionKeys::CurrentPm][\Library\Enums\SessionKeys::PmTechnicians] as $technician) {
-		if($technician['technician_id'] == $this->dataPost['id']) {
-		  $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_with'] = $technician;
-		  $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_type'] = $this->dataPost['selection_type'];
-		  $result['success'] = true;
-		  break;
-		}
-	  }
-	} else {
-	  foreach($_SESSION[\Library\Enums\SessionKeys::CurrentPm][\Library\Enums\SessionKeys::PmServices] as $service) {
-		if($service['service_id'] == $this->dataPost['id']) {
-		  $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_with'] = $service;
-		  $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_type'] = $this->dataPost['selection_type'];
-		  $result['success'] = true;
-		  break;
-		}
-	  }
-	}
+    $discussionObj = new \Applications\PMTool\Models\Dao\Discussion;
+    $discussionManager = $this->managers->getManagerOf("Discussion");
+    $currentTask =   \Applications\PMTool\Helpers\TaskHelper::GetCurrentSessionTask($this->user());
+    $taskId = $currentTask[\Library\Enums\SessionKeys::TaskObj]->task_id();
+    $discussionObj->setTask_Id($taskId);
+    $id = $discussionManager->add ($discussionObj);
+    $result['success']  = false;
+    if ($id) {
+      $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['discussion_id'] = $id;
 
-    $this->SendResponseWS(
-      $result, array(
-        "resx_file" => \Applications\PMTool\Resources\Enums\ResxFileNameKeys::ActiveTask,
-        "resx_key" => $this->action(),
-        "step" => ($result['success']) ? "success" : "error"
-      )
-	);
+      if($this->dataPost['selection_type'] == 'technician') {
+        // also set the discussion
+        // id
+        foreach($_SESSION[\Library\Enums\SessionKeys::CurrentPm][\Library\Enums\SessionKeys::PmTechnicians] as $technician) {
+        if($technician['technician_id'] == $this->dataPost['id']) {
+          $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_with'] = $technician;
+          $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_id'] = $this->dataPost['id'];
+          $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_type'] = $this->dataPost['selection_type'];
+          $result['success'] = true;
+          break;
+        }
+        }
+      } else {
+        foreach($_SESSION[\Library\Enums\SessionKeys::CurrentPm][\Library\Enums\SessionKeys::PmServices] as $service) {
+        if($service['service_id'] == $this->dataPost['id']) {
+          $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_with'] = $service;
+          $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_id'] = $this->dataPost['id'];
+          $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_type'] = $this->dataPost['selection_type'];
+          $result['success'] = true;
+          break;
+        }
+
+       }
+      }
+    }
+
+   $this->SendResponseWS(
+          $result, array(
+            "resx_file" => \Applications\PMTool\Resources\Enums\ResxFileNameKeys::ActiveTask,
+            "resx_key" => $this->action(),
+            "step" => ($result['success']) ? "success" : "error"
+          )
+        );
+
   }
   
   public function executePostNote(\Library\HttpRequest $rq) {
