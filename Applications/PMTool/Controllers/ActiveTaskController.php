@@ -81,38 +81,55 @@ class ActiveTaskController extends \Library\BaseController {
             \Applications\PMTool\Resources\Enums\ViewVariablesKeys::form_modules, $this->app()->router()->selectedRoute()->phpModules());
   }
 
+  // TODO needs
+  // check if is receiver
+  // or  sender
+  //
+  // receiver = the person the pm sent to
   public function executeSendMessage(\Library\HttpRequest $rq) {
     $result = $this->InitResponseWS();
-    $currentDiscussion = $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion];
     $currSessTask =  \Applications\PMTool\Helpers\TaskHelper::GetCurrentSessionTask($this->user());
     $userConnected = \Applications\PMTool\Helpers\UserHelper::GetUserConnectedSession($this->user());
+    $discussionObj = new \Applications\PMTool\Models\Dao\Discussion;
     $discussionContentObj= new \Applications\PMTool\Models\Dao\Discussion_content;
+    
+    //  
+    // when we have a discussion
+    // we can use it if not
+
+    $discussionManager = $this->managers->getManagerOf("Discussion");
+    $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
+    $discussionContentObj = new \Applications\PMTool\Models\Dao\Discussion_content;
+    $discussionObj= new \Applications\PMTool\Models\Dao\Discussion; 
+    if (isset($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion])) {
+      $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromSession($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]);
+      $discussionId = $currentDiscussion->discussion_id();
+    } else {
+      $discussionId = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionId($rq, $this->dataPost()); 
+      $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromDB($discussionId, $discussionObj, $discussionContentObj, $discussionManager, $discussionContentManager);
+    }
+    
      $result['success'] = false; 
     $discussionManager = $this->managers->getManagerOf("Discussion");
     $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
     $dataPost = $this->dataPost(); 
+    $dataPost = array("discussion_id" => 1);
     $discussionId = $dataPost['discussion_id'];
+    
     // send the receiver this message
     // through our means
     // of communication
-    $post = array(
-       "discussion_id" => $dataPost['discussion_id'],
-       "discussion_content_value"=> $dataPost['message'],
-       "discussion_content_category_value" => $currentDiscussion['comm_id'],
-       "discussion_content_category_type" => $currentDiscussion['comm_type']
-    );
-      
-    foreach ($post as $k => $v) {
-      $discussionContentObj->$k = $v;
-    }
-    // call our helper 
+  
+    $discussionContentObj = \Applications\PMTool\Helpers\DiscussionHelper::FormNewMessage($discussionContentObj, $dataPost, $currentDiscussion);
+    //echo var_dump($discussionContentObj);
     //
     $res = \Applications\PMTool\Helpers\DiscussionHelper::SendMessage(
         $this->app()->user(),
-        $currSessTask['task_info_obj']->task_name, 
+        $currSessTask['task_info_obj']->task_name,
         $discussionId,
         $discussionContentObj
     );
+
     $res2 = $discussionContentManager->add($discussionContentObj); 
 
     if ($res && $res2) {
@@ -140,6 +157,16 @@ class ActiveTaskController extends \Library\BaseController {
     $dataPost = $this->dataPost();
     //$page = $dataPost['page'];
     //$size = $dataPost['size'];
+    if (isset($_SESSION[\Applications\PMTool\Resources\Enums\ViewVariablesKeys::currentSessionj])) {
+      $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromSession($_SESSION[\Applications\PMTool\Resources\Enums\ViewVariablesKeys::currentSession]);
+    } else {
+       $discussionId = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionId($rq, $this->dataPost());
+       $discussionObj = new \Applications\PMTool\Models\Dao\Discussion;
+       $discussionContentObj = new \Applications\PMTool\Models\Dao\Discussion_content;
+       $discussionManager = $this->managers->getManagerOf("Discusssion");
+       $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
+       $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromDB($discussionId, $discussionObj, $discussionContentObj, $discussionManager, $discussionContentManager);
+    }
     $currentDiscussion = $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion];
       
     $result['success'] = false;
@@ -176,9 +203,128 @@ class ActiveTaskController extends \Library\BaseController {
     ));
   }
 
+  // get all the communications
+  // for a user type
+  // this is task based
+  // 
+  // this function should fail when user_type = pm
+  public function executeGetTaskCommunications(\Library\HttpRequest $rq) {
+      $result = $this->InitResponseWS(); 
+      $taskObj = new \Applications\PMTool\Models\Dao\Task;
+      $discussionManager = $this->managers->getManagerOf("Discussion"); 
+      $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
+      $taskManager = $this->managers->getManagerOf("Task");
+      $dataPost = $this->dataPost();
+      //$dataPost = array("task_id"=>1);
+      
+      $taskId = $dataPost['task_id'];
+      $taskId = 1; 
+      $taskObj->setTask_Id($taskId);
+      $task = $taskManager->selectOne($taskObj);
+       
+      $currSessTask = \Applications\PMTool\Helpers\TaskHelper::GetCurrentSessionTask($this->user());
+
+      $messages = \Applications\PMTool\Helpers\DiscussionHelper::GetTaskDiscussions($this->user(), $taskId, $discussionManager, $discussionContentManager);
+
+     $result['data'] = sizeof($messages) > 0 ? $messages: array();
+     $result['success'] = is_array($messages) ? true: false;
+
+
+    $this->SendResponseWS($result,
+        array(
+          "resx_file" => \Applications\PMTool\Resources\Enums\ResxFileNameKeys::ActiveTask,
+          "resx_key" => $this->action(),
+          "step" => ($result['success']) ? "success" : "error"
+        )
+    );
+  }
+
+
+  // non pm based message viewing
+  // and responding interface
+  public function executeViewTaskCommunication(\Library\HttpRequest $rq) {
+     $sessionProject = \Applications\PMTool\Helpers\ProjectHelper::GetCurrentSessionProject($this->user());
+     $currentTask = \Applications\PMTool\Helpers\TaskHelper::GetCurrentSessionTask($this->user());
+     
+     if (!$sessionProject) {
+        $this->Redirect(\Library\Enums\ResourceKeys\UrlKeys::ProjectSelectProject . "?onSuccess=" . 
+        \Library\Enums\ResourceKeys\UrlKeys::TaskAddPrompt);
+     }  
+     // needs discussion
+     // id
+     //$dataPost = $this->dataPost();
+     $taskId = $rq->getData("task_id");
+     $taskObj = new \Applications\PMTool\Models\Dao\Task;
+     $taskManager = $this->managers->getManagerOf("Task");
+     $taskObj->setTask_Id($taskId);
+     $taskManager->selectOne($taskObj);
+     $discussionId = $rq->getData("discussion_id");
+     $discussionManager = $this->managers->getManagerOf("Discussion");
+     $discussionObj = new \Applications\PMTool\Models\Dao\Discussion;
+     $discussionObj->setDiscussion_Id($discussionId);
+     $discussionTitle = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionTitle($discussionObj, $taskObj);
+     
+     //$this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussion_title, $discussionObj->discussion_tite()
+
+      $this->page->addVar(
+        \Applications\PMTool\Resources\Enums\ViewVariablesKeys::form_modules,
+        $this->app()->router()->selectedRoute()->phpModules()
+      );
+      if (isset($discussionId)) {    
+      $this->page->addVar(
+        \Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussionId,
+        $discussionId
+      );
+      $this->page->AddVar(
+        \Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussionTitle,
+        $discussionTitle
+      );
+      $this->page->addVar(
+      \Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussionNotFound,
+      FALSE
+     );
+      } else {
+      // no discussion found
+      // add the no found variable
+      $this->page->addVar(
+        \Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussionNotFound,
+        TRUE 
+      ); 
+      }
+  }
+
+    
+  // view for all task communications
+  // non pm only
+  public function executeViewTaskCommunications(\Library\HttpRequest $rq) {
+    $sessionProject = \Applications\PMTool\Helpers\ProjectHelper::GetCurrentSessionProject($this->user());   
+    if (!$sessionProject) {
+      $this->Redirect(\Library\Enums\ResourceKeys\UrlKeys::ProjectSelectProject . "?onSuccess=" . 
+      \Library\Enums\ResourceKeys\UrlKeys::TaskAddPrompt);
+    }
+    $taskId = $rq->getData("task_id");
+    $sessionTask = \Applications\PMTool\Helpers\TaskHelper::SetCurrentSessionTask($this->user(), NULL, $taskId);
+    $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::currentProject, $sessionProject[\Library\Enums\SessionKeys::ProjectObject]); 
+    $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::currentTask, $sessionTask[\Library\Enums\SessionKeys::TaskObj]);
+     
+    if (isset($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion])) {
+     // TODO?
+     // $this->page->addVar(\Applications\PMTool\Resources\ViewVariablesKeys::currentDiscussions, $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]);
+     // $discussion = $_SESSION[
+    }     
+  
+    $data = array(
+      \Applications\PMTool\Resources\Enums\ViewVariablesKeys::module => strtolower($this->module()),
+    ); 
+
+    $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::data, $data);
+    $this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::form_modules, $this->app()->router()->selectedRoute()->phpModules());
+  }
+
+
   // for people
   // other than pm
-  public function executeViewCommunication(\Library\HttpRequest $rq) {
+  public function executeViewCommunications(\Library\HttpRequest $rq) {
     $sessionProject = \Applications\PMTool\Helpers\ProjectHelper::GetCurrentSessionProject($this->user());
     if (!$sessionProject) {
         $this->Redirect(\Library\Enums\ResourceKeys\UrlKeys::ProjectSelectProject . "?onSuccess=" .  
@@ -193,7 +339,9 @@ class ActiveTaskController extends \Library\BaseController {
 
     }
 
-
+    $this->page->addVar(
+        \Applications\PMTool\Resources\Enums\ViewVariablesKeys::form_modules, $this->app()->router()->selectedRoute()-phpModules()
+    );
 
   }
   public function executeCommunications(\Library\HttpRequest $rq) {
@@ -274,6 +422,7 @@ class ActiveTaskController extends \Library\BaseController {
     $result['success']  = false;
     if ($id) {
       $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['discussion_id'] = $id;
+      $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['task_id'] = $currentTask['task_info_obj']->task_id();
 
       if($this->dataPost['selection_type'] == 'technician') {
         // also set the discussion

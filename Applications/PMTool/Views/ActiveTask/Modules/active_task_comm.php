@@ -10,7 +10,7 @@
           // discussion id
           // field
           if ($discussion_id): ?>
-        <input type="hidden" id="discussion-id" name="discussion_id" value="<?php echo $discussion_id; ?>" />
+        <input type="hidden" id="<?php echo $resx['discussion_id_field']; ?>" name="discussion_id" value="<?php echo $discussion_id; ?>" />
         <? endif; ?>
       </div>
 

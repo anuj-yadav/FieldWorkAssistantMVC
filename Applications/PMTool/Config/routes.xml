@@ -422,7 +422,44 @@
 			<php_module key="tooltip_msg_module" file_name="tooltip_msg.php" shared="true" />
         </php_modules>
     </route><!--  activetask/forms -->
-	
+
+  <route url="activetask/viewTaskCommunication" module="ActiveTask" action="viewTaskCommunication" resxfile="active_task" type="ui" role="2">
+     <js_files>
+            <js_file use="head" value="Web/js/app/controllers/active_task.js" />
+            <js_file use="head" value="Web/js/app/controllers/discussion_manager.js" />
+        </js_files>
+        <css_files>
+            <css_file use="project" />
+            <css_file value="Web/css/app/discussions.css" />
+        </css_files>
+        <php_modules>
+          <php_module key="communications_listing_module" file_name="communications_listing_module.php" />
+        </php_modules>
+
+  </route>
+  <route url="activetask/viewTaskCommunications" module="ActiveTask" action="viewTaskCommunications" resxfile="active_task" type="ui" role="2">
+        <js_files>
+            <js_file use="head" value="Web/js/app/controllers/active_task.js" />
+            <js_file use="head" value="Web/js/app/controllers/discussion_manager.js" />
+        </js_files>
+        <css_files>
+            <css_file use="project" />
+            <css_file value="Web/css/app/discussions.css" />
+        </css_files>
+        <php_modules>
+          <php_module key="active_task_tabs_open" file_name="active_task_tabs_open.php" />
+          <php_module key="active_task_comm" file_name="active_task_comm.php" />
+          <php_module key="categorized_list_left" file_name="categorized_list_left.php" shared="true" />
+          <php_module key="group_list_left" file_name="group_list_left.php" shared="true" />
+          <php_module key="group_list_promote_buttons_module" file_name="group_list_promote_buttons.php" shared="true"/>
+          <php_module key="communications_button_module" file_name="communications_button_module.php" />
+          <php_module key="communications_listing_module" file_name="communications_listing_module.php" />
+          <php_module key="communications_task_view_module" file_name="communications_task_view_module.php" />
+                <php_module key="tabs_close" file_name="tabs_close.php" shared="true" />
+          <php_module key="tooltip_msg_module" file_name="tooltip_msg.php" shared="true" />
+
+        </php_modules>
+  </route>
 	<route url="activetask/communications" module="ActiveTask" action="communications" resxfile="active_task" type="ui" role="2">
         <js_files>
             <js_file use="head" value="Web/js/app/controllers/active_task.js" />
@@ -990,6 +1027,7 @@
   <route url="activetask/getNotes" module="ActiveTask" action="getNotes" resxfile="active_task" type="ws" />
   <route url="activetask/sendMessage" module="ActiveTask" action="sendMessage" resxfile="active_task" type="ws" />
   <route url="activetask/getMessages" module="ActiveTask" action="getMessages" resxfile="active_task" type="ws" />
+  <route url="activetask/getTaskCommunications" module="ActiveTask" action="getTaskCommunications" resxfile="active_task" type="ws" />
  
   <route url="service/add" module="Service" action="add" resxfile="service" type="ws" />
   <route url="service/edit" module="Service" action="edit" resxfile="service" type="ws" />

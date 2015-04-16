@@ -44,6 +44,14 @@ class Discussion extends \Library\Entity{
       $this->task_id = $task_id;
   }
 
+  public function setDiscussionContentCategory_Value($val) {
+    $this->discussion_content_category_value = $val;
+  }
+
+  public function setDiscussionContentCategory_Type($type) {
+    $this->discussion_content_category_type = $type;
+  }
+
   // GETTERS //
   public function discussion_id() {
     return $this->discussion_id;
@@ -51,6 +59,19 @@ class Discussion extends \Library\Entity{
 
   public function task_id() {
     return $this->task_id;
+  }
+
+
+  public function discussion_content_is_receiver($type) {
+    return $this->discussion_content_is_receiver = $type; 
+  }
+
+  public function discussion_content_category_value() {
+    return $this->discussion_content_category_value;
+  }
+
+  public function discussion_content_category_type() {
+    return $this->discussion_content_category_type;
   }
 
 
