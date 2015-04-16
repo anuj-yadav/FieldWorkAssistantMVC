@@ -13,7 +13,10 @@ $(document).ready(function() {
     var msg = $("#discussion_content_field").val();
     discussion_manager.sendMessage(msg, discussionId, isReceiver, function(data) {
         discussion_manager.getMessages(discussionId, function(data) {
+          if (data.result) {
+            discussion_ui.setTask(data.task);
             discussion_ui.propagateMessages(data.data, isReceiver);
+          }
         });
     });
   });
@@ -25,7 +28,10 @@ $(document).ready(function() {
     var msg = $("#discussion_content_field").val();
     discussion_manager.sendMessage(msg, discussionId, isReceiver, function(data) {
         discussion_manager.getMessages(discussionId, function(data) {
-           discussion_ui.propagateMessages(data.data, isReceiver);
+           if ( data.result) {
+             discussion_ui.setTask(data.task);
+             discussion_ui.propagateMessages(data.data, isReceiver);
+          }
         });
     });
   });
@@ -33,14 +39,29 @@ $(document).ready(function() {
   // non pm
   if (discussion_ui.isInViewCommunications()) {
     var taskId = discussion_ui.getTaskIdIfNeeded();
+
     if (taskId) {
        discussion_manager.getAllDiscussions(taskId, function(data) {
+        console.log(data);
           if (data.result) {
+            discussion_ui.setTask(data.task);
             discussion_ui.propagateDiscussions(data.data); 
           }
        });
      }
   };
+  // non pm
+  if (discussion_ui.isInViewCommunication()) {
+    var discussionId = discussion_ui.getDiscussionIdIfNeeded();
+    if (discussionId) {
+      discussion_manager.getMessages(discussionId, function(data) {
+        if (data.result) {
+          discussion_ui.propagateMessages(data.data);
+        }
+      });
+    }
+  }
+
   // pm only
   if (discussion_ui.isInCommunications()) {
     var discussionId = discussion_ui.getDiscussionIdIfNeeded();
@@ -59,13 +80,20 @@ $(document).ready(function() {
 
   discussion_ui.taskId = null;
   discussion_ui.discussionId = null;
+  discussion_ui.task = null;
   discussion_ui.isInCommunications = function() {
     return document.location.href.match(/communications/);
   };
   discussion_ui.isInViewCommunications = function() {
     return document.location.href.match(/viewTaskCommunications/);
   };
+  discussion_ui.isInViewCommunication = function() {
+    return document.location.href.match(/viewTaskCommunication/);
+  };
 
+  discussion_ui.setTask = function(task) {
+    discussion_ui.task = task;
+  };
   discussion_ui.propagateMessages = function(data, isReceiver) {
       // add messagesj
       // isReceiver should be a simple
@@ -91,11 +119,11 @@ $(document).ready(function() {
   };
 
   discussion_ui.getDiscussionTitle = function(discussion, task) {
-      return "Discussion #" + discussion.discussion_id + " for task '" + task.task_name + "'";
+      return "Discussion #" + discussion.discussion_id + " for task '"+ discussion_ui.task.task_name + "'";
   };
 
   discussion_ui.getViewLink = function(slice) {
-    return "./viewTaskCommunication?discussion_id="  + slice.discussion_id + "&task_id=" + slice.task_id;
+    return "./viewTaskCommunication?discussion_id="  + slice.discussion_id + "&task_id=" + discussion_ui.task.task_id;
   };
 
   discussion_ui.propagateDiscussions = function(data) {
@@ -111,13 +139,17 @@ $(document).ready(function() {
       for (var i in data) {
         var li = document.createElement("li");
         var title = document.createElement("div");
+        var clr = document.createElement("div");
         // add a link
         //
         var a = document.createElement("a");
         var link = discussion_ui.getViewLink (data[i]);
-        a.innerHTML = "temp";
+        a.innerHTML = discussion_ui.getDiscussionTitle(data[i]);
         a.setAttribute("href", link);
+        clr.setAttribute("style", "clear:both");
+
         li.appendChild(a);
+        li.appendChild(clr);
         $("#discussion_discussions").append(li);
       }
     }
@@ -141,6 +173,7 @@ $(document).ready(function() {
 })((window.discussion_ui = window.discussion_ui || {}));
 
 (function (discussion_manager) {
+  discussion_manager.controller = "activetask";
   // non pm
   discussion_manager.getAllDiscussions = function(taskId, callback) {
     datacx.post("activetask/getTaskCommunications",{

@@ -101,19 +101,17 @@ class ActiveTaskController extends \Library\BaseController {
     $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
     $discussionContentObj = new \Applications\PMTool\Models\Dao\Discussion_content;
     $discussionObj= new \Applications\PMTool\Models\Dao\Discussion; 
-    if (isset($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion])) {
-      $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromSession($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]);
-      $discussionId = $currentDiscussion->discussion_id();
-    } else {
+   // if (isset($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion])) {
+   //   $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromSession($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]);
+   // } else {
       $discussionId = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionId($rq, $this->dataPost()); 
       $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromDB($discussionId, $discussionObj, $discussionContentObj, $discussionManager, $discussionContentManager);
-    }
+  //  }
     
      $result['success'] = false; 
     $discussionManager = $this->managers->getManagerOf("Discussion");
     $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
     $dataPost = $this->dataPost(); 
-    $dataPost = array("discussion_id" => 1);
     $discussionId = $dataPost['discussion_id'];
     
     // send the receiver this message
@@ -121,6 +119,8 @@ class ActiveTaskController extends \Library\BaseController {
     // of communication
   
     $discussionContentObj = \Applications\PMTool\Helpers\DiscussionHelper::FormNewMessage($discussionContentObj, $dataPost, $currentDiscussion);
+
+
     //echo var_dump($discussionContentObj);
     //
     $res = \Applications\PMTool\Helpers\DiscussionHelper::SendMessage(
@@ -157,8 +157,8 @@ class ActiveTaskController extends \Library\BaseController {
     $dataPost = $this->dataPost();
     //$page = $dataPost['page'];
     //$size = $dataPost['size'];
-    if (isset($_SESSION[\Applications\PMTool\Resources\Enums\ViewVariablesKeys::currentSessionj])) {
-      $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromSession($_SESSION[\Applications\PMTool\Resources\Enums\ViewVariablesKeys::currentSession]);
+    if (isset($_SESSION[ \Library\Enums\SessionKeys::CurrentDiscussion])) {
+      $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromSession($_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]);
     } else {
        $discussionId = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionId($rq, $this->dataPost());
        $discussionObj = new \Applications\PMTool\Models\Dao\Discussion;
@@ -167,8 +167,8 @@ class ActiveTaskController extends \Library\BaseController {
        $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
        $currentDiscussion = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionFromDB($discussionId, $discussionObj, $discussionContentObj, $discussionManager, $discussionContentManager);
     }
-    $currentDiscussion = $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion];
-      
+     
+    $currSessTask = \Applications\PMTool\Helpers\TaskHelper::GetCurrentSessionTask($this->user());
     $result['success'] = false;
     //$discussionId = $currentDiscussion['discussion_id'];
     $discussionId = $dataPost['discussion_id'];
@@ -193,7 +193,7 @@ class ActiveTaskController extends \Library\BaseController {
       //$result = $this->InitResponseWS("success");
       $result['success'] = true;
       $result['data'] = $data;
-        
+      $result['task'] = $currSessTask['task_info_obj'];
     }
 
     return $this->SendResponseWS($result,array(
@@ -218,15 +218,15 @@ class ActiveTaskController extends \Library\BaseController {
       //$dataPost = array("task_id"=>1);
       
       $taskId = $dataPost['task_id'];
-      $taskId = 1; 
       $taskObj->setTask_Id($taskId);
-      $task = $taskManager->selectOne($taskObj);
+      $task = $taskManager->selectOne($taskObj,"task_id");
+      $task = $task[0];
        
       $currSessTask = \Applications\PMTool\Helpers\TaskHelper::GetCurrentSessionTask($this->user());
-
       $messages = \Applications\PMTool\Helpers\DiscussionHelper::GetTaskDiscussions($this->user(), $taskId, $discussionManager, $discussionContentManager);
-
+      
      $result['data'] = sizeof($messages) > 0 ? $messages: array();
+     $result['task'] = $task;
      $result['success'] = is_array($messages) ? true: false;
 
 
@@ -257,12 +257,13 @@ class ActiveTaskController extends \Library\BaseController {
      $taskObj = new \Applications\PMTool\Models\Dao\Task;
      $taskManager = $this->managers->getManagerOf("Task");
      $taskObj->setTask_Id($taskId);
-     $taskManager->selectOne($taskObj);
+     $task = $taskManager->selectOne($taskObj, "task_id");
+     $task = $task[0];
      $discussionId = $rq->getData("discussion_id");
      $discussionManager = $this->managers->getManagerOf("Discussion");
      $discussionObj = new \Applications\PMTool\Models\Dao\Discussion;
      $discussionObj->setDiscussion_Id($discussionId);
-     $discussionTitle = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionTitle($discussionObj, $taskObj);
+     $discussionTitle = \Applications\PMTool\Helpers\DiscussionHelper::GetDiscussionTitle($discussionObj, $task);
      
      //$this->page->addVar(\Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussion_title, $discussionObj->discussion_tite()
 
@@ -415,12 +416,17 @@ class ActiveTaskController extends \Library\BaseController {
 
     $discussionObj = new \Applications\PMTool\Models\Dao\Discussion;
     $discussionManager = $this->managers->getManagerOf("Discussion");
+    $discussionContentManager = $this->managers->getManagerOf("Discussion_content");
     $currentTask =   \Applications\PMTool\Helpers\TaskHelper::GetCurrentSessionTask($this->user());
     $taskId = $currentTask[\Library\Enums\SessionKeys::TaskObj]->task_id();
     $discussionObj->setTask_Id($taskId);
     $id = $discussionManager->add ($discussionObj);
     $result['success']  = false;
-    if ($id) {
+    $dataPost = $this->dataPost();
+    $continueAnyway = $this->dataPost['continue_anyway'];
+
+    if ($continueAnyway  &&  !\Applications\PMTool\Helpers\DiscussionHelper::HasCurrentDiscussion($taskId, $dataPost['selection_type'], $dataPost['id'], $discussionManager, $discussionContentManager)) {
+
       $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['discussion_id'] = $id;
       $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['task_id'] = $currentTask['task_info_obj']->task_id();
 
@@ -432,6 +438,7 @@ class ActiveTaskController extends \Library\BaseController {
           $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_with'] = $technician;
           $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_id'] = $this->dataPost['id'];
           $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_type'] = $this->dataPost['selection_type'];
+          $result['type'] = \Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussion_ready;  
           $result['success'] = true;
           break;
         }
@@ -443,11 +450,14 @@ class ActiveTaskController extends \Library\BaseController {
           $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_id'] = $this->dataPost['id'];
           $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion]['comm_type'] = $this->dataPost['selection_type'];
           $result['success'] = true;
+          $result['type'] = \Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussion_ready;
           break;
         }
-
        }
       }
+    } else {
+      $result['success'] = true;
+      $result['type'] = \Applications\PMTool\Resources\Enums\ViewVariablesKeys::discussion_not_ready;
     }
 
    $this->SendResponseWS(

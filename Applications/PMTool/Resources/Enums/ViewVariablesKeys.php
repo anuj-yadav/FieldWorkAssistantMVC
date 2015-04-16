@@ -95,6 +95,8 @@ class ViewVariablesKeys {
   const discussionTitle = "discussion_title";
   const discussionContentType = "comm_type";
   const discussionContentValue = "comm_id";
+  const discussion_not_ready = "discussion_not_ready";
+  const discussion_ready = "discusion_ready";
 
   //user details form
   const user_details = "user_details";

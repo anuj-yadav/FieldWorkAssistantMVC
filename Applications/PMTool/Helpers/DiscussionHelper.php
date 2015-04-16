@@ -54,7 +54,6 @@ final class DiscussionHelper {
   public static function GetTaskDiscussions($user, $taskId, $discussionManager, $discussionContentManager) {
     $discussionObj = new \Applications\PMTool\Models\Dao\Discussion;
     $discussionContentObj = new \Applications\PMTool\Models\Dao\Discussion_content;
-
     $discussionObj->setTask_Id($taskId);
     $messages = $discussionManager->selectMany($discussionObj, "task_id", true, true);
     $out = array();
@@ -73,20 +72,20 @@ final class DiscussionHelper {
       $discussionContentObj->setDiscussion_Id($m->discussion_id());
       $discussions = $discussionContentManager->selectMany($discussionContentObj, "discussion_id", true, true);
       foreach ($discussions as $disc) {
-      /*
+      if ($userType == "pm_id") {
+        $out[] = $m;
+      } else {      
         if ($disc->discussion_content_category_value == 
             $userValue
             &&
             $rev[$disc->discussion_content_category_type] == 
             $userType) {
-      */
-       if (true) {
-
-           $out[] = $disc;
-        }
-       } 
-
+          $out[] = $m;
+      } 
     }
+    break;
+  }
+  }
 
     return $out;
   }
@@ -166,6 +165,37 @@ final class DiscussionHelper {
    
   public static function GetSessionDiscussion()  {
       return $_SESSION[\Library\Enums\SessionKeys::CurrentDiscussion];
+  }
+
+  // does a pm have a discussion with a member
+  // this is ONLY when the discussion_content
+  // has been filled
+  public static function HasCurrentDiscussion($taskId, $categoryValue, $categoryType, $discussionManager, $discussionContentManager) {
+     $discussionObj = new \Applications\PMTool\Models\Dao\Discussion;
+     $discussionObj->setTask_Id($taskId); 
+     $discussionObj = $discussionManager->selectMany($discussionObj, "task_id");
+     $rev = array(
+        "technician" => "technician_id"
+     );
+     if (is_array($discussionObj) && sizeof($discussionObj) > 0) {
+       $discussionObj = $discussionObj[0];
+       if ($discussionObj) {
+          $discussionId = $discussionObj->discussion_id();
+          $discussionContentObj = new \Applications\PMTool\Models\Dao\Discussion_content;
+          $discussionContentObj->setDiscussion_Id($discussionId);
+          $contents = $discussionContentManager->selectMany($discussionContentObj, "discussion_id");
+          if (is_array($contents) && sizeof($contents) > 0) {
+            $contents = $contents[0];
+            if ($contents->discussion_content_category_type == $categoryType 
+            &&
+               (int) $contents->discussion_content_category_value == (int) $categoryValue) {
+              return true;
+            }
+          }
+       }
+   }
+
+    return false;
   }
   public static function SetCommInfo($discussionContentObj) {
       //   get who we'ere
