@@ -185,15 +185,24 @@ $(document).ready(function(){
     return selector;
   };
   
-  activetask_manager.updateTaskTechnicians = function(selection_type, id) {
-    datacx.post("activetask/startCommWith", {"selection_type": selection_type, "id": id}).then(function(reply) {
-      console.log(reply);
+  activetask_manager.updateTaskTechnicians = function(selection_type, id, continueAnyway) {
+    continueAnyway = continueAnyway || false;
+    datacx.post("activetask/startCommWith", {"selection_type": selection_type, "id": id, "continue_anyway": continueAnyway}).then(function(reply) {
 	  if (reply === null || reply.result === 0) {//has an error
         toastr.error(reply.message);
         return undefined;
       } else {//success
-        toastr.success(reply.message);
-        utils.redirect("activetask/communications?task_id=" + utils.getQueryVariable("task_id"));
+        if (reply.type == "discussion_not_ready") {
+      
+          utils.showConfirmBox("You already have a discussion with this user, do you want to create a new one?", function(accept) {
+            if (accept) {
+              activetask_manager.updateTaskTechnicians(selection_type, id, true);
+            }
+          });
+        } else {
+          toastr.success(reply.message);
+          utils.redirect("activetask/communications?task_id=" + utils.getQueryVariable("task_id"));
+        }
       }
     });
   };

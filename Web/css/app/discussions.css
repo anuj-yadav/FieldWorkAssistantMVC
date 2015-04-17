@@ -1,0 +1,40 @@
+/**
+ * CSS file for discussions
+ *
+ * add  styling to the discussions
+ * area as well as the communication
+ * views, do not edit the activetask 
+ * css here
+ */
+
+ol.discussion-messages {
+
+}
+
+ol.discussion-messages li {
+  border-bottom: 1px solid  #e3e3e3;
+  padding: 20px;
+  margin-bottom: 10px;
+}
+
+ol.discussion-messages li .title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+ol.discussion-messages li .content {
+  font-size: 11px;
+}
+
+ol.discussion-discussions li {
+  padding: 15px 2px;
+  border-bottom: 1px solid #E3E3E3; 
+}
+ol.discussion-discussions li a {
+   font-size: 11px;
+}
+
+ol.discussion-discussions li .content {
+  font-size: 10px;
+}
+

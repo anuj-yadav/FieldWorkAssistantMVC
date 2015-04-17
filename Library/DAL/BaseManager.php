@@ -157,11 +157,11 @@ class BaseManager extends \Library\Manager {
                     "DELETE from `" . $this->GetTableName($object) . "` WHERE $where_filter_id = " . $object->$where_filter_id() . ";", $params);
   }
 
-  private function GetTableName($object) {
+  protected function GetTableName($object) {
     return \Applications\PMTool\Helpers\CommonHelper::GetShortClassName($object);
   }
 
-  private function ExecuteQuery($sql_query, $params) {
+  protected function ExecuteQuery($sql_query, $params) {
     $result = -1;
     try {
       //\Library\Utility\DebugHelper::LogAsHtmlComment($sql_query);

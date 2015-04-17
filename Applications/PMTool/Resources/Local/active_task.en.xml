@@ -14,7 +14,19 @@
   <resource key="message_error_postNote">Failed to save Note</resource>
   <resource key="message_success_getNotes">Notes for this task populated</resource>
   <resource key="message_error_getNotes">No Note available yet.</resource>
-  
+  <resource key="message_error_sendMessage">Unable to send message</resource>
+  <resource key="message_success_sendMessage">Sent message</resource>
+  <resource key="message_error_getMessages">Could not retrive messages</resource>
+  <resource key="message_success_getMessages">Got messages</resource>
+  <resource key="message_error_getTaskCommunications">Could not retrieve communications</resource>
+  <resource key="message_success_getTaskCommunications">Got messages</resource> 
+  <resource key="discussion_not_found">Discussion not found</resource> 
+  <resource key="discussion_new_response">Enter a response</resource>
+  <resource key="discussion_id_field">discussion_id_field</resource>
+  <resource key="discussion_content_placeholder">Please type a message</resource>  
+  <resource key="discussion_content_field">discussion_content_field</resource>
+  <resource key="discussion_list_h2">Current Discussion Messages</resource>
+  <resource key="discussion_your_communications">Your Communications</resource>
   <resource key="task_tab_info">Task Status</resource>
   <resource key="task_tab_map">Map</resource>
   <resource key="task_tab_forms">Forms</resource>

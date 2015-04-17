@@ -114,7 +114,6 @@ class AuthenticateController extends \Library\BaseController {
       "user_role" => \Applications\PMTool\Helpers\UserHelper::GetRoleFromType($rq->getData("type"))
     );
     $user = \Applications\PMTool\Helpers\CommonHelper::PrepareUserObject($data, new Applications\PMTool\Models\Dao\User());
-    
     $user->setUser_password($protect->Encrypt($this->app->config->get("encryption_key"), $user->user_password()));
 
     $loginDal = $this->managers->getManagerOf("Login");

@@ -8,16 +8,12 @@ if (!defined('__EXECUTION_ACCESS_RESTRICTION__'))
 class TaskDal extends \Library\DAL\BaseManager {
 
   public function selectOne($object, $by=false) {
-    $params = array('type' => 'SELECT', 
-     'dao_class' => \Applications\PMTool\Helpers\CommonHelper::GetFullClassName($object)
+    $params = array('type' => 'select', 
+     'dao_class' => \Applications\PMTool\Helpers\CommonHelpers::GetFullClassName($object)
      );
-    if (is_string($by)) {
     return $this->ExecuteQuery(sprintf("
       SELECT * FROM `%s` WHERE %s = '%s'
-    ", $this->GetTableName($object),$by,$object->$by()), $params);
-    } else {
-     return parent::selectOne($object);
-    }
+    ", $this->GetTableName($object),$by,$object->$by()));
   }
 
   public function update($object) {

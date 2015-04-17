@@ -88,7 +88,15 @@ class ViewVariablesKeys {
   const labServices = "lab_services";
   
   //Active Task 
+  const taskId = "task_id";
   const currentDiscussions = "current_discussion";
+  const discussionId = "discussion_id";
+  const discussionNotFound = "discussion_not_found";
+  const discussionTitle = "discussion_title";
+  const discussionContentType = "comm_type";
+  const discussionContentValue = "comm_id";
+  const discussion_not_ready = "discussion_not_ready";
+  const discussion_ready = "discusion_ready";
 
   //user details form
   const user_details = "user_details";
