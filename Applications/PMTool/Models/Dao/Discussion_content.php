@@ -4,7 +4,7 @@
 *
 * @package    Basic MVC framework
 * @author     Jeremie Litzler
-* @copyright  Copyright (c) 2014
+* @copyright  Copyright (c) 2015
 * @license
 * @link
 * @since
@@ -82,5 +82,6 @@ class Discussion_content extends \Library\Entity{
   public function discussion_content_value() {
     return $this->discussion_content_value;
   }
+
 
 }
