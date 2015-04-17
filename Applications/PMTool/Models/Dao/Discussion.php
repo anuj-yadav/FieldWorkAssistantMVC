@@ -4,7 +4,7 @@
 *
 * @package    Basic MVC framework
 * @author     Jeremie Litzler
-* @copyright  Copyright (c) 2014
+* @copyright  Copyright (c) 2015
 * @license
 * @link
 * @since
@@ -29,11 +29,13 @@ if ( ! defined('__EXECUTION_ACCESS_RESTRICTION__')) exit('No direct script acces
 class Discussion extends \Library\Entity{
   public 
     $discussion_id,
-    $task_id;
+    $task_id,
+    $discussion_start_timestamp;
 
   const 
     DISCUSSION_ID_ERR = 0,
-    TASK_ID_ERR = 1;
+    TASK_ID_ERR = 1,
+    DISCUSSION_START_TIMESTAMP_ERR = 2;
 
   // SETTERS //
   public function setDiscussion_id($discussion_id) {
@@ -44,12 +46,8 @@ class Discussion extends \Library\Entity{
       $this->task_id = $task_id;
   }
 
-  public function setDiscussionContentCategory_Value($val) {
-    $this->discussion_content_category_value = $val;
-  }
-
-  public function setDiscussionContentCategory_Type($type) {
-    $this->discussion_content_category_type = $type;
+  public function setDiscussion_start_timestamp($discussion_start_timestamp) {
+      $this->discussion_start_timestamp = $discussion_start_timestamp;
   }
 
   // GETTERS //
@@ -61,17 +59,8 @@ class Discussion extends \Library\Entity{
     return $this->task_id;
   }
 
-
-  public function discussion_content_is_receiver($type) {
-    return $this->discussion_content_is_receiver = $type; 
-  }
-
-  public function discussion_content_category_value() {
-    return $this->discussion_content_category_value;
-  }
-
-  public function discussion_content_category_type() {
-    return $this->discussion_content_category_type;
+  public function discussion_start_timestamp() {
+    return $this->discussion_start_timestamp;
   }
 
 
