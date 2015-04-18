@@ -15,23 +15,25 @@ if (isset($current_discussion['comm_type'])) {
     <?php echo $current_project->project_name(); ?>
     <?php if ($current_task !== NULL) { ?>
       <span class="glyphicon glyphicon-chevron-right"></span>    
-      <?php echo $current_task->task_name();
+      <?php
+      echo $current_task->task_name();
     }
     ?>
     <span class="glyphicon glyphicon-chevron-right"></span>    
     <?php echo $resx['active_task_comm_header'] ?>
     <?php if ($comm_with_name !== '') { ?>
       <span class="glyphicon glyphicon-chevron-right"></span>    
-      <?php echo $comm_with_name;
+      <?php
+      echo $comm_with_name;
     }
     ?>
   </h3>  
   <div class="form_sections">
     <!-- open tabs -->
-<?php require $form_modules[Applications\PMTool\Resources\Enums\ViewVariables\ActiveTask::active_task_tabs_open]; ?>
+    <?php require $form_modules[Applications\PMTool\Resources\Enums\ViewVariables\ActiveTask::active_task_tabs_open]; ?>
 
     <!-- task map block -->
-<?php require $form_modules[\Applications\PMTool\Resources\Enums\ViewVariables\ActiveTask::active_task_comm]; ?>      
+    <?php require $form_modules[\Applications\PMTool\Resources\Enums\ViewVariables\ActiveTask::active_task_comm]; ?>      
 
     <!-- close tabs -->
   <?php require $form_modules[Applications\PMTool\Resources\Enums\ViewVariables\ActiveTask::tabs_close]; ?>
